@@ -78,19 +78,15 @@ func main() {
 			func(i widget.ListItemID, o fyne.CanvasObject) {
 				if menu.CalculatorResult != "" {
 					if i == 0 {
-						fmt.Println("hey, it's working?")
 						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[2].(*widget.Label).SetText(menu.CalculatorResult)
 						img := canvas.NewImageFromResource(nil)
 						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1] = img
-						fmt.Println("hey, it's still working?")
 					} else {
-						fmt.Println(entries[menu.AppEntries[i-1].Name].Name)
 						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[2].(*widget.Label).SetText(entries[menu.AppEntries[i-1].Name].Name)
 						img := canvas.NewImageFromFile(entries[menu.AppEntries[i-1].Name].Icon)
 						img.FillMode = canvas.ImageFillContain
 						img.SetMinSize(fyne.NewSize(32, 32))
 						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1] = img
-						fmt.Println(entries[menu.AppEntries[i-1].Name].Name)
 					}
 				} else {
 					o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[2].(*widget.Label).SetText(entries[menu.AppEntries[i].Name].Name)
@@ -102,7 +98,16 @@ func main() {
 			},
 		)
 		list.OnSelected = func(i int) {
-			cmd := cleanExec(entries[menu.AppEntries[i].Name].Exec)
+			var cmd string
+			if menu.CalculatorResult == "" {
+				cmd = cleanExec(entries[menu.AppEntries[i].Name].Exec)
+			} else {
+				if i == 0 {
+					cmd = fmt.Sprintf("echo %s | xclip -selection clipboard", menu.CalculatorResult)
+				} else {
+					cmd = cleanExec(entries[menu.AppEntries[i-1].Name].Exec)
+				}
+			}
 			if cmd != "" {
 				exec.Command("sh", "-c", cmd).Start()
 			}
@@ -141,6 +146,11 @@ func main() {
 				input.Resize(fyne.NewSize(800, 40))
 				splash.SetContent(inputWrapper)
 				splash.Resize(fyne.NewSize(800, 40))
+			}
+		}
+		input.OnSubmitted = func(s string) {
+			if menu.CalculatorResult != "" || len(menu.AppEntries) > 0 {
+				list.Select(0)
 			}
 		}
 
