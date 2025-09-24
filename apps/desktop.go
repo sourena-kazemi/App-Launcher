@@ -29,7 +29,8 @@ func parseDesktopFile(path string) (*AppEntry, error) {
 		return nil, err
 	}
 	defer file.Close()
-	currentDE := os.Getenv("XDG_CURRENT_DESKTOP")
+	// currentDE := os.Getenv("XDG_CURRENT_DESKTOP")
+	currentDE := "GNOME"
 
 	entry := &AppEntry{}
 	scanner := bufio.NewScanner(file)
