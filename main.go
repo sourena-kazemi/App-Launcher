@@ -17,14 +17,20 @@ import (
 	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/mnogu/go-calculator"
 	"github.com/sourena-kazemi/App-Launcher/apps"
+	"github.com/sourena-kazemi/App-Launcher/commands"
 	"github.com/sourena-kazemi/App-Launcher/components"
 )
 
 type menu struct {
-	CalculatorResult   string
-	AppEntries         map[string]apps.AppEntry
-	AppNames           []string
-	SelectedAppEntries []apps.AppEntry
+	CalculatorResult string
+
+	AppEntries map[string]apps.AppEntry
+	AppNames   []string
+
+	Commands      map[string]func(fyne.App)
+	CommandsNames []string
+
+	SelectedItems []string
 }
 
 func calculateHeight(itemCount int) float32 {
@@ -55,18 +61,19 @@ func main() {
 		splash.Show()
 		splash.Resize(fyne.NewSize(800, 40))
 
-		// selectedEntries := []apps.AppEntry{}
 		entries, names := apps.FindDesktopEntries()
 		menu := menu{}
 		menu.AppEntries = entries
 		menu.AppNames = names
+		menu.Commands = commands.Commands
+		menu.CommandsNames = commands.GetCommandsNames()
 
 		list := widget.NewList(
 			func() int {
 				if menu.CalculatorResult != "" {
-					return len(menu.SelectedAppEntries) + 1
+					return len(menu.SelectedItems) + 1
 				}
-				return len(menu.SelectedAppEntries)
+				return len(menu.SelectedItems)
 			},
 			func() fyne.CanvasObject {
 				leftPad := canvas.NewRectangle(color.Transparent)
@@ -84,19 +91,35 @@ func main() {
 						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).Resource = nil
 						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).Refresh()
 					} else {
-						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[2].(*widget.Label).SetText(menu.AppEntries[menu.SelectedAppEntries[i-1].Name].Name)
-						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[2].(*widget.Label).Refresh()
-						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).File = menu.AppEntries[menu.SelectedAppEntries[i-1].Name].Icon
+						if _, ok := menu.Commands[menu.SelectedItems[i-1]]; ok {
+							o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).Resource = nil
+						} else {
+							o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).File = menu.AppEntries[menu.SelectedItems[i-1]].Icon
+
+						}
+
+						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[2].(*widget.Label).SetText(menu.SelectedItems[i-1])
+
 						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).FillMode = canvas.ImageFillContain
 						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).SetMinSize(fyne.NewSize(32, 32))
+
+						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[2].(*widget.Label).Refresh()
 						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).Refresh()
 					}
 				} else {
-					o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[2].(*widget.Label).SetText(menu.AppEntries[menu.SelectedAppEntries[i].Name].Name)
-					o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[2].(*widget.Label).Refresh()
-					o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).File = menu.AppEntries[menu.SelectedAppEntries[i].Name].Icon
+					if _, ok := menu.Commands[menu.SelectedItems[i]]; ok {
+						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).Resource = nil
+					} else {
+						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).File = menu.AppEntries[menu.SelectedItems[i]].Icon
+
+					}
+
+					o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[2].(*widget.Label).SetText(menu.SelectedItems[i])
+
 					o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).FillMode = canvas.ImageFillContain
 					o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).SetMinSize(fyne.NewSize(32, 32))
+
+					o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[2].(*widget.Label).Refresh()
 					o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).Refresh()
 				}
 			},
@@ -105,12 +128,20 @@ func main() {
 		list.OnSelected = func(i int) {
 			var cmd string
 			if menu.CalculatorResult == "" {
-				cmd = cleanExec(menu.AppEntries[menu.SelectedAppEntries[i].Name].Exec)
+				if command, ok := menu.Commands[menu.SelectedItems[i]]; ok {
+					command(a)
+				} else {
+					cmd = cleanExec(menu.AppEntries[menu.SelectedItems[i]].Exec)
+				}
 			} else {
 				if i == 0 {
 					cmd = fmt.Sprintf("echo %s | xclip -selection clipboard", menu.CalculatorResult)
 				} else {
-					cmd = cleanExec(menu.AppEntries[menu.SelectedAppEntries[i-1].Name].Exec)
+					if command, ok := menu.Commands[menu.SelectedItems[i-1]]; ok {
+						command(a)
+					} else {
+						cmd = cleanExec(menu.AppEntries[menu.SelectedItems[i-1]].Exec)
+					}
 				}
 			}
 			if cmd != "" {
@@ -131,14 +162,14 @@ func main() {
 				menu.CalculatorResult = ""
 			}
 
-			selectedNames := fuzzy.FindNormalizedFold(s, menu.AppNames)
-			menu.SelectedAppEntries = []apps.AppEntry{}
+			selectedNames := fuzzy.FindNormalizedFold(s, append(menu.AppNames, menu.CommandsNames...))
+			menu.SelectedItems = []string{}
 			for i := 0; i < len(selectedNames); i++ {
-				menu.SelectedAppEntries = append(menu.SelectedAppEntries, menu.AppEntries[selectedNames[i]])
+				menu.SelectedItems = append(menu.SelectedItems, selectedNames[i])
 			}
 			list.Refresh()
 
-			itemsCount := len(menu.SelectedAppEntries)
+			itemsCount := len(menu.SelectedItems)
 			if menu.CalculatorResult != "" {
 				itemsCount += 1
 			}
@@ -161,7 +192,7 @@ func main() {
 		}
 
 		input.OnSubmitted = func(s string) {
-			if menu.CalculatorResult != "" || len(menu.SelectedAppEntries) > 0 {
+			if menu.CalculatorResult != "" || len(menu.SelectedItems) > 0 {
 				list.Select(0)
 			}
 		}
