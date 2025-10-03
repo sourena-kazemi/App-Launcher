@@ -3,9 +3,7 @@ package main
 import (
 	"fmt"
 	"image/color"
-	"math"
 	"os/exec"
-	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -19,6 +17,8 @@ import (
 	"github.com/sourena-kazemi/App-Launcher/apps"
 	"github.com/sourena-kazemi/App-Launcher/commands"
 	"github.com/sourena-kazemi/App-Launcher/components"
+	"github.com/sourena-kazemi/App-Launcher/theme"
+	"github.com/sourena-kazemi/App-Launcher/util"
 )
 
 type menu struct {
@@ -29,30 +29,14 @@ type menu struct {
 
 	Commands      map[string]func(fyne.App)
 	CommandsNames []string
+	CommandIcon   string
 
 	SelectedItems []string
 }
 
-func calculateHeight(itemCount int) float32 {
-	inputHeight := float32(40)
-	itemHeight := float32(40)
-
-	if itemCount == 0 {
-		return inputHeight
-	}
-	return inputHeight + (itemHeight * float32(math.Min(float64(itemCount), 10))) + (float32(math.Min(float64(itemCount), 10)+1) * 4)
-}
-
-func cleanExec(raw string) string {
-	// Remove placeholders like %U, %f, etc.
-	return strings.FieldsFunc(raw, func(r rune) bool {
-		return r == '%' || r == '\n'
-	})[0]
-}
-
 func main() {
 	a := app.New()
-	a.Settings().SetTheme(&myTheme{})
+	a.Settings().SetTheme(&theme.Theme{})
 
 	if drv, ok := a.Driver().(desktop.Driver); ok {
 		splash := drv.CreateSplashWindow()
@@ -67,6 +51,7 @@ func main() {
 		menu.AppNames = names
 		menu.Commands = commands.Commands
 		menu.CommandsNames = commands.GetCommandsNames()
+		menu.CommandIcon = commands.CommandIcon
 
 		list := widget.NewList(
 			func() int {
@@ -88,11 +73,11 @@ func main() {
 					if i == 0 {
 						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[2].(*widget.Label).SetText(menu.CalculatorResult)
 						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[2].(*widget.Label).Refresh()
-						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).Resource = nil
+						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).File = ""
 						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).Refresh()
 					} else {
 						if _, ok := menu.Commands[menu.SelectedItems[i-1]]; ok {
-							o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).Resource = nil
+							o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).File = menu.CommandIcon
 						} else {
 							o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).File = menu.AppEntries[menu.SelectedItems[i-1]].Icon
 
@@ -108,12 +93,10 @@ func main() {
 					}
 				} else {
 					if _, ok := menu.Commands[menu.SelectedItems[i]]; ok {
-						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).Resource = nil
+						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).File = menu.CommandIcon
 					} else {
 						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).File = menu.AppEntries[menu.SelectedItems[i]].Icon
-
 					}
-
 					o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[2].(*widget.Label).SetText(menu.SelectedItems[i])
 
 					o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).FillMode = canvas.ImageFillContain
@@ -125,13 +108,13 @@ func main() {
 			},
 		)
 
-		list.OnSelected = func(i int) {
+		list.OnSelected = func(i widget.ListItemID) {
 			var cmd string
 			if menu.CalculatorResult == "" {
 				if command, ok := menu.Commands[menu.SelectedItems[i]]; ok {
 					command(a)
 				} else {
-					cmd = cleanExec(menu.AppEntries[menu.SelectedItems[i]].Exec)
+					cmd = util.CleanExec(menu.AppEntries[menu.SelectedItems[i]].Exec)
 				}
 			} else {
 				if i == 0 {
@@ -140,7 +123,7 @@ func main() {
 					if command, ok := menu.Commands[menu.SelectedItems[i-1]]; ok {
 						command(a)
 					} else {
-						cmd = cleanExec(menu.AppEntries[menu.SelectedItems[i-1]].Exec)
+						cmd = util.CleanExec(menu.AppEntries[menu.SelectedItems[i-1]].Exec)
 					}
 				}
 			}
@@ -181,7 +164,7 @@ func main() {
 				content := container.NewBorder(inputWrapper, nil, nil, nil, list)
 				splash.SetContent(content)
 
-				windowHeight := calculateHeight(itemsCount)
+				windowHeight := util.CalculateHeight(itemsCount)
 				splash.Resize(fyne.NewSize(800, windowHeight))
 			} else {
 				inputWrapper = container.New(layout.NewVBoxLayout(), layout.NewSpacer(), input, layout.NewSpacer())

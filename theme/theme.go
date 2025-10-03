@@ -1,4 +1,4 @@
-package main
+package theme
 
 import (
 	"image/color"
@@ -7,23 +7,23 @@ import (
 	"fyne.io/fyne/v2/theme"
 )
 
-type myTheme struct{}
+type Theme struct{}
 
-func (myTheme) Font(s fyne.TextStyle) fyne.Resource {
+func (Theme) Font(s fyne.TextStyle) fyne.Resource {
 	return resourceInter24ptRegularTtf
 }
 
-func (myTheme) Size(name fyne.ThemeSizeName) float32 {
+func (Theme) Size(name fyne.ThemeSizeName) float32 {
 	if name == theme.SizeNameText {
 		return 20
 	}
 	return theme.DefaultTheme().Size(name)
 }
 
-func (myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
+func (Theme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
 	return theme.DefaultTheme().Color(name, variant)
 }
 
-func (myTheme) Icon(name fyne.ThemeIconName) fyne.Resource {
+func (Theme) Icon(name fyne.ThemeIconName) fyne.Resource {
 	return theme.DefaultTheme().Icon(name)
 }
