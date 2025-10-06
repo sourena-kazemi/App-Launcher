@@ -69,7 +69,8 @@ func Todo(app fyne.App) {
 				log.Fatal(err)
 			}
 			list.Refresh()
-
+			windowHeight := util.CalculateHeight(len(items))
+			splash.Resize(fyne.NewSize(800, windowHeight))
 		}
 
 		input := components.NewExtendedEntry(splash, list)
