@@ -78,24 +78,31 @@ func Todo(app fyne.App) {
 		inputWrapper := container.New(layout.NewVBoxLayout(), input)
 
 		input.OnSubmitted = func(s string) {
-			err := obsidian.AddLine(filePath, fmt.Sprintf("- [ ] %s", s))
-			if err != nil {
-				log.Fatal(err)
-			}
-			items, err = obsidian.LoadChecklistItems(filePath)
-			if err != nil {
-				log.Fatal(err)
+			if s != "" {
+				err := obsidian.AddLine(filePath, fmt.Sprintf("- [ ] %s", s))
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				input.SetText("")
+
+				items, err = obsidian.LoadChecklistItems(filePath)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				list.Refresh()
+
+				for i := 0; i < len(items); i++ {
+					list.SetItemHeight(i, 40)
+				}
+				content := container.NewBorder(inputWrapper, nil, nil, nil, list)
+				splash.SetContent(content)
+				windowHeight := util.CalculateHeight(len(items))
+				splash.Resize(fyne.NewSize(800, windowHeight))
+
 			}
 
-			list.Refresh()
-
-			for i := 0; i < len(items); i++ {
-				list.SetItemHeight(i, 40)
-			}
-			content := container.NewBorder(inputWrapper, nil, nil, nil, list)
-			splash.SetContent(content)
-			windowHeight := util.CalculateHeight(len(items))
-			splash.Resize(fyne.NewSize(800, windowHeight))
 		}
 
 		inputWrapper = container.New(layout.NewVBoxLayout(), layout.NewSpacer(), input, layout.NewSpacer())
