@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"image/color"
+	"os"
 	"os/exec"
+	"slices"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -17,6 +19,7 @@ import (
 	"github.com/sourena-kazemi/App-Launcher/apps"
 	"github.com/sourena-kazemi/App-Launcher/commands"
 	"github.com/sourena-kazemi/App-Launcher/components"
+	"github.com/sourena-kazemi/App-Launcher/settings"
 	"github.com/sourena-kazemi/App-Launcher/theme"
 	"github.com/sourena-kazemi/App-Launcher/util"
 )
@@ -30,6 +33,10 @@ type menu struct {
 	Commands      map[string]func(fyne.App)
 	CommandsNames []string
 	CommandIcon   string
+
+	Settings     map[string]string
+	SettingNames []string
+	SettingIcon  string
 
 	SelectedItems []string
 }
@@ -49,9 +56,14 @@ func main() {
 		menu := menu{}
 		menu.AppEntries = entries
 		menu.AppNames = names
+
 		menu.Commands = commands.Commands
 		menu.CommandsNames = commands.GetCommandsNames()
 		menu.CommandIcon = commands.CommandIcon
+
+		menu.Settings = settings.Settings
+		menu.SettingNames = settings.GetSettingsNames()
+		menu.SettingIcon = settings.SettingIcon
 
 		list := widget.NewList(
 			func() int {
@@ -78,6 +90,8 @@ func main() {
 					} else {
 						if _, ok := menu.Commands[menu.SelectedItems[i-1]]; ok {
 							o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).File = menu.CommandIcon
+						} else if _, ok := menu.Settings[menu.SelectedItems[i-1]]; ok {
+							o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).File = menu.SettingIcon
 						} else {
 							o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).File = menu.AppEntries[menu.SelectedItems[i-1]].Icon
 
@@ -94,6 +108,8 @@ func main() {
 				} else {
 					if _, ok := menu.Commands[menu.SelectedItems[i]]; ok {
 						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).File = menu.CommandIcon
+					} else if _, ok := menu.Settings[menu.SelectedItems[i]]; ok {
+						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).File = menu.SettingIcon
 					} else {
 						o.(*fyne.Container).Objects[1].(*fyne.Container).Objects[1].(*canvas.Image).File = menu.AppEntries[menu.SelectedItems[i]].Icon
 					}
@@ -113,6 +129,8 @@ func main() {
 			if menu.CalculatorResult == "" {
 				if command, ok := menu.Commands[menu.SelectedItems[i]]; ok {
 					command(a)
+				} else if command, ok := menu.Settings[menu.SelectedItems[i]]; ok {
+					cmd = command
 				} else {
 					cmd = util.CleanExec(menu.AppEntries[menu.SelectedItems[i]].Exec)
 				}
@@ -122,13 +140,17 @@ func main() {
 				} else {
 					if command, ok := menu.Commands[menu.SelectedItems[i-1]]; ok {
 						command(a)
+					} else if command, ok := menu.Settings[menu.SelectedItems[i-1]]; ok {
+						cmd = command
 					} else {
 						cmd = util.CleanExec(menu.AppEntries[menu.SelectedItems[i-1]].Exec)
 					}
 				}
 			}
 			if cmd != "" {
-				exec.Command("sh", "-c", cmd).Start()
+				command := exec.Command("sh", "-c", cmd)
+				command.Env = append(os.Environ(), "XDG_CURRENT_DESKTOP=GNOME")
+				command.Start()
 			}
 			splash.Close()
 		}
@@ -145,7 +167,7 @@ func main() {
 				menu.CalculatorResult = ""
 			}
 
-			selectedNames := fuzzy.FindNormalizedFold(s, append(menu.AppNames, menu.CommandsNames...))
+			selectedNames := fuzzy.FindNormalizedFold(s, slices.Concat(menu.AppNames, menu.CommandsNames, menu.SettingNames))
 			menu.SelectedItems = []string{}
 			for i := 0; i < len(selectedNames); i++ {
 				menu.SelectedItems = append(menu.SelectedItems, selectedNames[i])

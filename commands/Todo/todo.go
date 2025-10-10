@@ -52,7 +52,6 @@ func Todo(app fyne.App) {
 		)
 
 		list.OnSelected = func(id widget.ListItemID) {
-			fmt.Print(id)
 			err := obsidian.RemoveLine(filePath, items[id].LineIndex)
 			if err != nil {
 				log.Fatal(err)

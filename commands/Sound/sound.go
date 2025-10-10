@@ -37,11 +37,11 @@ func Sound(app fyne.App) {
 				cmd = fmt.Sprintf("amixer sset Master %s", s)
 
 			}
+			exec.Command("sh", "-c", cmd).Run()
 			result, err := exec.Command("bash", "-c", "awk -F'[][]' '/Left:/ { print $2 }' <(amixer sget Master)").Output()
 			if err == nil {
 				input.SetPlaceHolder(strings.TrimSuffix(strings.TrimSpace(string(result)), "%"))
 			}
-			exec.Command("sh", "-c", cmd).Start()
 			input.SetText("")
 		}
 

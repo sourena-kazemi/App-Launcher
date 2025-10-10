@@ -39,8 +39,6 @@ func getBacklightDevices() ([]string, error) {
 		return nil, fmt.Errorf("error reading command output: %v", err)
 	}
 
-	fmt.Print(backlightDevices)
-
 	return backlightDevices, nil
 }
 
@@ -78,7 +76,6 @@ func Light(app fyne.App) {
 			}
 			percentage := int(float32(lightLevelInt) / float32(maxLightLevelInt) * 100)
 			placeHolder += fmt.Sprintf(" %s : %d ", device, percentage)
-			fmt.Println("Device", device, string(lightLevel), lightLevelInt, string(maxLightLevel), maxLightLevelInt, percentage, placeHolder)
 		}
 
 		input := components.NewLightCommandEntry(splash, devices)

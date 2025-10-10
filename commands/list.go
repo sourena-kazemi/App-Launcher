@@ -8,12 +8,12 @@ import (
 )
 
 var Commands = map[string]func(fyne.App){
-	"Todo":  todo.Todo,
-	"Sound": sound.Sound,
-	"Light": light.Light,
+	"Todo":         todo.Todo,
+	"Adjust Sound": sound.Sound,
+	"Adjust Light": light.Light,
 }
 
-const CommandIcon = "/usr/share/icons/Papirus/48x48/apps/org.gnome.Settings.svg"
+const CommandIcon = "/usr/share/icons/Papirus/48x48/apps/terminal.svg"
 
 func GetCommandsNames() []string {
 	result := []string{}
